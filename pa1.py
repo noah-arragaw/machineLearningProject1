@@ -24,27 +24,6 @@ def entropyHelper(num0, num1, length):
     tempEnt2 = float(num0/length) * np.log2(float(num0/length))
     return -1 * tempEnt1 - tempEnt2
 
-# def informationGain(data):
-#     parentEntropy = entropy(data)
-#     leftNode = pd.DataFrame()
-#     rightNode = pd.DataFrame()
-#     for columns in data:
-#         if data[columns][0] == 1:
-#             break
-#         else:
-#             # sumOfFeature = data[columns].mean()
-#             # avgOfFeature = float(sumOfFeature / len(data.index))
-#             # for row in range(len(data.index)):
-#             #     if data[columns][row] < avgOfFeature:
-#             #         print("LESS + " + str(data[columns][row]))
-#             #         leftNode.append(data[columns][row])
-#             #     else:
-#             #         print("GREATER")
-#             #         #rightNode.append(data.iloc[row])
-#             #         rightNode.append(data[columns][row])
-#     # print("ENTROPY OF LEFT NODE: " + str(entropy(leftNode)))
-#     # print("ENTROPY OF RIGHT NODE: " + str(entropy(rightNode)))
-
 def informationGain(data, featureName):
     parentEntropy = entropy(data)
     leftNode = []
@@ -75,29 +54,61 @@ for column in columnLabels:
             runningBest = currInfoGain
             runningBestLoc = column
 
-def splitNode(node):
-    
+def nodeSplit(rootNode):
+    parentNode = Node(rootNode)
+    # create left and right node for first split
+    leftNodeFrame = pd.DataFrame(pd.np.empty((0, 3)))
+    rightNodeFrame = pd.DataFrame(pd.np.empty((0, 3)))
+    leftNodeFrame.columns = columnLabels
+    rightNodeFrame.columns = columnLabels
 
-# set rootNode to be entire dataframe
-rootNode = Node(testData)
+    # find average value for first attribute and split into two dataframes
+    avgOfFeature = rootNode[runningBestLoc].mean()
 
-# create left and right node for first split
-leftNodeTemp = pd.DataFrame()
-rightNodeTemp = pd.DataFrame()
+    #for row in range(len(rootNode.index)):
+    for i, row in rootNode.iterrows():
+        # if np.where(pd.isnull(rootNode[runningBestLoc][row])):
+        #     print("HERE")
+        if (rootNode[runningBestLoc][i] < avgOfFeature):
+            # print("LESS + " + str(testData[runningBestLoc][row]))
+            leftNodeFrame = leftNodeFrame.append(rootNode.loc[i])
+        else:
+            rightNodeFrame = rightNodeFrame.append(rootNode.loc[i])
+            #rightNode.append(data[columns][row])
+    #leftNode = Node(leftNodeFrame, parent=parentNode)
+    #rightNode = Node(rightNodeFrame, parent=parentNode)
 
-# find average value for first attribute and split into two dataframes
-avgOfFeature = testData[runningBestLoc].mean()
+    return leftNodeFrame, rightNodeFrame
 
-for row in range(len(testData.index)):
-    if testData[runningBestLoc][row] < avgOfFeature:
-        # print("LESS + " + str(testData[runningBestLoc][row]))
-        leftNodeTemp.append(testData.iloc[row])
-    else:
-        # print("GREATER")
-        rightNodeTemp.append(testData.iloc[row])
-        #rightNode.append(data[columns][row])
+leftNodeFrame, rightNodeFrame = nodeSplit(testData)
 
-leftNode = Node(leftNodeTemp, parent=rootNode)
-rightNode = Node(rightNodeTemp, parent=rootNode)
+# find best attribute for second split (left branch)
+runningBest = 0
+for column in columnLabels:
+    if column != 'label':
+        currInfoGain = informationGain(leftNodeFrame, column)
+        if currInfoGain > runningBest:
+            runningBest = currInfoGain
+            runningBestLoc = column
 
-print(RenderTree(rightNode))
+leftLeftNodeFrame, leftRightNodeFrame = nodeSplit(leftNodeFrame)
+
+# find best attribute for second split (right branch)
+runningBest = 0
+for column in columnLabels:
+    if column != 'label':
+        currInfoGain = informationGain(testData, column)
+        if currInfoGain > runningBest:
+            runningBest = currInfoGain
+            runningBestLoc = column
+
+rightLeftNodeFrame, rightRightNodeFrame = nodeSplit(rightNodeFrame)
+
+# build tree using dataframes created
+rootNode = Node(testData, parent=None)
+leftNode = Node(leftNodeFrame, parent=rootNode)
+rightNode = Node(rightNodeFrame, parent=rootNode)
+leftLeftNode = Node(leftLeftNodeFrame, parent=leftNode)
+leftRightNode = Node(leftRightNodeFrame, parent=leftNode)
+rightLeftNode = Node(rightLeftNodeFrame, parent=rightNode)
+rightRightNode = Node(rightRightNodeFrame, parent=rightNode)
